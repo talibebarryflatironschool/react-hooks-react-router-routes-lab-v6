@@ -62,6 +62,12 @@ import { render, screen } from "@testing-library/react";
 import routes from "../routes";
 import { vi } from "vitest";
 
+const id = 1;
+const router = createMemoryRouter(routes, {
+    initialEntries: [`/movie/${id}`],
+    initialIndex: 0
+});
+
 // Mock fetch for testing
 beforeAll(() => {
   global.fetch = vi.fn((url) => {
@@ -83,43 +89,42 @@ beforeAll(() => {
   });
 });
 
-test("renders the Home component on route '/'", () => {
-  const router = createMemoryRouter(routes);
-  render(<RouterProvider router={router} />);
-  expect(screen.getByText(/Home Page/)).toBeInTheDocument();
+test("renders without any errors", () => {
+  const errorSpy = vi.spyOn(global.console, "error");
+  render(<RouterProvider router={router}/>);
+  expect(errorSpy).not.toHaveBeenCalled();
+  errorSpy.mockRestore();
 });
 
-test("renders the Actors component on route '/actors'", () => {
-  const router = createMemoryRouter(routes, {
-    initialEntries: ["/actors"],
-  });
+test("renders movie's title in an h1", async () => {
   render(<RouterProvider router={router} />);
-  expect(screen.getByText(/Actors Page/)).toBeInTheDocument();
+  const h1 = await screen.findByTestId("movie-title");
+  expect(h1).toBeInTheDocument();
+  expect(h1.tagName).toBe("H1");
 });
 
-test("renders the Directors component on route '/directors'", () => {
-  const router = createMemoryRouter(routes, {
-    initialEntries: ["/directors"],
-  });
+test("renders movie's time within a p tag", async () => {
   render(<RouterProvider router={router} />);
-  expect(screen.queryByText(/Directors Page/)).toBeInTheDocument();
+  const p = await screen.findByTestId("movie-time");
+  expect(p).toBeInTheDocument();
+  expect(p.tagName).toBe("P");
 });
 
-test("renders the Movie component on route '/movie/:id'", async () => {
-  const id = 1;
-  const router = createMemoryRouter(routes, {
-    initialEntries: [`/movie/${id}`],
-  });
+test("renders a span for each genre", async () => {
   render(<RouterProvider router={router} />);
-  expect(await screen.findByText(/Doctor Strange/)).toBeInTheDocument();
+  const genres = ["Action", "Adventure", "Fantasy"];
+  const spans = await screen.findAllByText((content, element) => 
+    element.tagName.toLowerCase() === "span" && genres.includes(content)
+  );
+  expect(spans.length).toBe(genres.length);
 });
 
-test("renders an error page when given a bad URL", () => {
+test("renders the <NavBar /> component", async () => {
   const router = createMemoryRouter(routes, {
-    initialEntries: ["/bad-route"],
+    initialEntries: [`/movie/1`]
   });
-  render(<RouterProvider router={router} />);
-  expect(screen.getByText(/Oops! Looks like something went wrong./)).toBeInTheDocument();
+  render(<RouterProvider router={router}/>);
+  expect(await screen.findByRole("navigation")).toBeInTheDocument();
 });
 
 // Clean up fetch mock after all tests

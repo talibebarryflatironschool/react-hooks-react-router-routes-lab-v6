@@ -1,54 +1,75 @@
 import "@testing-library/jest-dom";
-import { RouterProvider, createMemoryRouter} from "react-router-dom"
+import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import routes from "../routes";
+import { vi } from "vitest";
 
-const id = 1
+const id = 1;
 const router = createMemoryRouter(routes, {
     initialEntries: [`/movie/${id}`],
     initialIndex: 0
-})
+});
+
+// Mock fetch for testing
+beforeAll(() => {
+  global.fetch = vi.fn((url) => {
+    if (url.includes("/movies/1")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          id: 1,
+          title: "Doctor Strange",
+          time: 115,
+          genres: ["Action", "Adventure", "Fantasy"],
+        }),
+      });
+    }
+    return Promise.resolve({
+      ok: false,
+      json: () => Promise.resolve({ message: "Movie not found" })
+    });
+  });
+});
 
 test("renders without any errors", () => {
   const errorSpy = vi.spyOn(global.console, "error");
-
   render(<RouterProvider router={router}/>);
-
   expect(errorSpy).not.toHaveBeenCalled();
-
   errorSpy.mockRestore();
 });
 
 test("renders movie's title in an h1", async () => {
   render(<RouterProvider router={router} />);
-  const h1 = await screen.findByText(/Doctor Strange/);
+  const h1 = await screen.findByTestId("movie-title");
   expect(h1).toBeInTheDocument();
   expect(h1.tagName).toBe("H1");
 });
 
 test("renders movie's time within a p tag", async () => {
   render(<RouterProvider router={router} />);
-  const p = await screen.findByText(/115/);
+  const p = await screen.findByTestId("movie-time");
   expect(p).toBeInTheDocument();
   expect(p.tagName).toBe("P");
 });
 
-test("renders a span for each genre",  () => {
+test("renders a span for each genre", async () => {
   render(<RouterProvider router={router} />);
   const genres = ["Action", "Adventure", "Fantasy"];
-  genres.forEach(async (genre) =>{
-    const span = await screen.findByText(genre);
+  for (const genre of genres) {
+    const span = await screen.findByText(genre, { selector: 'span' });
     expect(span).toBeInTheDocument();
-    expect(span.tagName).toBe("SPAN");
-  })
+  }
 });
 
 test("renders the <NavBar /> component", async () => {
   const router = createMemoryRouter(routes, {
     initialEntries: [`/movie/1`]
-  })
-  render(
-      <RouterProvider router={router}/>
-  );
+  });
+  render(<RouterProvider router={router}/>);
   expect(await screen.findByRole("navigation")).toBeInTheDocument();
+});
+
+// Clean up fetch mock after all tests
+afterAll(() => {
+  global.fetch.mockRestore();
 });

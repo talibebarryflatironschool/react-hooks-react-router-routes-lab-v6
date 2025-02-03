@@ -66,7 +66,6 @@ import { BrowserRouter } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import { vi } from "vitest";
 import { act } from "react";
-import { act } from "react";
 
 // Mock fetch for testing
 beforeAll(() => {
