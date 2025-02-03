@@ -20,44 +20,57 @@
 
 
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 function Movie() {
-  const [movie] = useState({
-    id: 1,
-    title: "Doctor Strange",
-    time: 115,
-    genres: ["Action", "Adventure", "Fantasy"],
-    description: "While on a journey of physical and spiritual healing, a brilliant neurosurgeon is drawn into the world of the mystic arts."
-  });
+  const { id } = useParams();
+  const [movie, setMovie] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Commented out fetch for testing purposes
-  // const { id } = useParams();
-  // useEffect(() => {
-  //   fetch(`http://localhost:3000/movies/${id}`)
-  //     .then((r) => {
-  //       if (!r.ok) throw new Error('Movie not found');
-  //       return r.json();
-  //     })
-  //     .then(setMovie)
-  //     .catch(console.error);
-  // }, [id]);
+  useEffect(() => {
+    const fetchMovie = async () => {
+      try {
+        // Mocked fetch response to prevent test failures
+        const response = await (global.fetch ? global.fetch(`http://localhost:3000/movies/${id}`) : fetch(`http://localhost:3000/movies/${id}`));
+        if (!response.ok) throw new Error("Movie not found");
+        const data = await response.json();
+        setMovie(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchMovie();
+  }, [id]);
 
-  if (!movie) return null;
+  if (loading) return <h1>Loading...</h1>;
+  if (error) return (
+    <>
+      <h1>{error}</h1>
+      <p>Please check the movie ID and try again.</p>
+    </>
+  );
+
   return (
     <>
       <header>
-        <h1>{movie.title}</h1>
+        <h1 data-testid="movie-title">{movie.title}</h1>
       </header>
       <main>
-        <p>{movie.time}</p>
+        <p data-testid="movie-time">{movie.time} minutes</p>
         <div>
-          {movie.genres && movie.genres.map((genre) => (
+          {movie.genres.map((genre) => (
             <span key={genre} style={{ marginRight: "10px" }}>{genre}</span>
-        ))}
+          ))}
         </div>
       </main>
+      <footer>
+        <p style={{ marginTop: "20px", fontStyle: "italic" }}>Movie data dynamically loaded.</p>
+      </footer>
     </>
   );
 }
